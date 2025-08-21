@@ -7,11 +7,11 @@ interface NodeInterface {
 
     public function setParent(?NodeInterface $parent): static;
 
-    public function getChildren(): ?iterable;
+    public function getChildren(): iterable;
 
     public function hasChildren(): bool;
 
-    public function appendChild(NodeInterface $child): static;
+    public function appendChildren(NodeInterface ...$children): static;
 
     public function prependChild(NodeInterface $child): static;
 
