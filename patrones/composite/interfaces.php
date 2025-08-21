@@ -20,4 +20,6 @@ interface NodeInterface {
     public function removeChild(NodeInterface $child): static;
 
     public function clearChildren(): static;
+
+    public function isAncestor(NodeInterface $node): bool;
 }

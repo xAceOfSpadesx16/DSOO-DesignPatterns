@@ -1,8 +1,8 @@
 <?php
 namespace Builder\Elements;
 
-require_once "interfaces.php";
-require_once dirname(__DIR__) . "\composite\interfaces.php";
+require_once __DIR__ . DIRECTORY_SEPARATOR . "interfaces.php";
+require_once dirname(__DIR__) . DIRECTORY_SEPARATOR . "composite" . DIRECTORY_SEPARATOR . "interfaces.php";
 
 use Builder\Enums\TagName;
 
@@ -11,27 +11,11 @@ use Builder\Interfaces\RawTextElementInterface;
 use Builder\Interfaces\TaggedInterface;
 use Composite\Interfaces\NodeInterface;
 
-abstract class BaseElement implements TaggedInterface, NodeInterface {
-}
-
-class HtmlElement extends BaseElement implements HTMLElementInterface {
-    private TagName $tagName;
-    private NodeInterface $parent;
+class NodeElement implements NodeInterface{
+    private ?NodeInterface $parent = null;
     private ?array $children = null;
-    private ?array $classes = null;
-    private ?array $styles = null;
-    private ?array $attributes = null;
-    private ?string $id = null;
 
-    public function __construct(TagName $tagName) {
-        $this->tagName = $tagName;
-    }
-
-    public function getTagName(): string {
-        return $this->tagName->value;
-    }
-
-    public function getParent(): NodeInterface {
+    public function getParent(): ?NodeInterface {
         return $this->parent;
     }
 
@@ -39,8 +23,9 @@ class HtmlElement extends BaseElement implements HTMLElementInterface {
         $this->parent = $parent;
         return $this;
     }
-    public function getChildren(): iterable {
-        return $this->children ?? [];
+
+    public function getChildren(): ?iterable {
+        return $this->children;
     }
 
     public function hasChildren(): bool {
@@ -62,12 +47,8 @@ class HtmlElement extends BaseElement implements HTMLElementInterface {
     }
 
     public function insertChildAt(int $index, NodeInterface $child): static {
-        if ($this === $child) {
-            throw new \InvalidArgumentException("El nodo no puede insertarse a sí mismo.");
-        }
-        //implementar isAncestor?
-        if ($this->parent === $child) {
-            throw new \InvalidArgumentException("El nodo padre no puede insertarse como hijo.");
+        if ($this->isAncestor($child)) {
+            throw new \InvalidArgumentException("El nodo hijo no puede ser un ancestro.");
         }
 
         $this->children ??= [];
@@ -84,10 +65,156 @@ class HtmlElement extends BaseElement implements HTMLElementInterface {
         return $this;
     }
 
-    public function clearChildren(): static{
+    public function clearChildren(): static {
         $this->children = null;
         return $this;
     }
+
+    public function isAncestor(NodeInterface $node): bool {
+        if ($this === $node) {
+            return true;
+        }
+        $parent = $this->parent;
+        while ($parent) {
+            if ($parent === $node) {
+                return true;
+            }
+            $parent = $parent->getParent();
+        }
+        return false;
+    }
+}
+
+class NoChildNode implements NodeInterface {
+    private ?NodeInterface $parent = null;
+
+    public function __construct(?NodeInterface $parent = null) {
+        $this->parent = $parent;
+    }
+
+    public function getParent(): ?NodeInterface {
+        return $this->parent;
+    }
+
+    public function setParent(?NodeInterface $parent): static {
+        $this->parent = $parent;
+        return $this;
+    }
+
+    public function getChildren(): ?iterable {
+        return null;
+    }
+
+    public function hasChildren(): bool {
+        return false;
+    }
+
+    public function appendChild(NodeInterface $child): static {
+        throw new \BadMethodCallException("No se pueden agregar hijos a este nodo.");
+    }
+
+    public function prependChild(NodeInterface $child): static {
+        throw new \BadMethodCallException("No se pueden agregar hijos a este nodo.");
+    }
+
+    public function insertChildAt(int $index, NodeInterface $child): static {
+        throw new \BadMethodCallException("No se pueden agregar hijos a este nodo.");
+    }
+
+    public function removeChild(NodeInterface $child): static {
+        throw new \BadMethodCallException("No se pueden eliminar hijos de este nodo.");
+    }
+
+    public function clearChildren(): static {
+        throw new \BadMethodCallException("No se pueden eliminar hijos de este nodo.");
+    }
+
+    public function isAncestor(NodeInterface $node): bool {
+        return false;
+    }
+
+}
+
+abstract class BaseElement implements TaggedInterface {
+}
+
+abstract class BaseHTMLElement extends NodeElement  implements HTMLElementInterface {}
+
+abstract class BaseTextElement extends NoChildNode implements RawTextElementInterface {}
+
+class HtmlElement extends BaseHTMLElement {
+    private TagName $tagName;
+    private ?array $classes = null;
+    private ?array $styles = null;
+    private ?array $attributes = null;
+    private ?string $id = null;
+
+    public function __construct(TagName $tagName) {
+        $this->tagName = $tagName;
+    }
+
+    public function getTagName(): string {
+        return $this->tagName->value;
+    }
+
+    // public function getParent(): NodeInterface {
+    //     return parent::getParent();
+    // }
+
+    // public function setParent(?NodeInterface $parent): static {
+    //     parent::setParent(parent: $parent);
+    //     return $this;
+    // }
+
+    // public function getChildren(): iterable {
+    //     return $this->children ?? [];
+    // }
+
+    // public function hasChildren(): bool {
+    //     return !empty($this->children);
+    // }
+
+    // public function appendChild(NodeInterface $child): static {
+    //     $this->children ??= [];
+    //     $this->children[] = $child;
+    //     $child->setParent($this);
+    //     return $this;
+    // }
+
+    // public function prependChild(NodeInterface $child): static {
+    //     $this->children ??= [];
+    //     array_unshift($this->children, $child);
+    //     $child->setParent($this);
+    //     return $this;
+    // }
+
+    // public function insertChildAt(int $index, NodeInterface $child): static {
+    //     if ($this === $child) {
+    //         throw new \InvalidArgumentException("El nodo no puede insertarse a sí mismo.");
+    //     }
+    //     //implementar isAncestor?
+    //     if ($this->parent === $child) {
+    //         throw new \InvalidArgumentException("El nodo padre no puede insertarse como hijo.");
+    //     }
+
+    //     $this->children ??= [];
+    //     array_splice($this->children, $index, 0, [$child]);
+    //     $child->setParent($this);
+    //     return $this;
+    // }
+
+    // public function removeChild(NodeInterface $child): static {
+    //     if ($this->children) {
+    //         $this->children = array_filter($this->children, fn($c) => $c !== $child);
+    //         $child->setParent(null);
+    //     }
+    //     return $this;
+    // }
+
+    // public function clearChildren(): static{
+    //     $this->children = null;
+    //     return $this;
+    // }
 
     public function addClass(string $class): static {
         $this->classes ??= [];
@@ -159,13 +286,14 @@ class HtmlElement extends BaseElement implements HTMLElementInterface {
 
 
 // String Element
-class TextElement extends BaseElement implements RawTextElementInterface {
+class TextElement extends BaseTextElement {
     private ?string $text = null;
     private TagName $tagName;
     private ?NodeInterface $parent = null;
 
-    public function __construct() {
+    public function __construct(string $text) {
         $this->tagName = TagName::STRING;
+        $this->setText($text);
     }
 
     public function setText(string $text): static {
@@ -190,7 +318,7 @@ class TextElement extends BaseElement implements RawTextElementInterface {
     }
 
     public function getChildren(): ?array {
-       return null;
+        return null;
     }
 
     public function hasChildren(): bool {
