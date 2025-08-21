@@ -7,7 +7,7 @@ interface NodeInterface {
 
     public function setParent(?NodeInterface $parent): static;
 
-    public function getChildren(): iterable;
+    public function getChildren(): ?iterable;
 
     public function hasChildren(): bool;
 

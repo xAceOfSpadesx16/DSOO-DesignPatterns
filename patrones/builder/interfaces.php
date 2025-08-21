@@ -5,7 +5,6 @@ require_once 'enums.php';
 require_once 'elements.php';
 
 use Builder\Enums\TagName;
-use RecursiveIterator;
 
 // Element interfaces
 
@@ -33,6 +32,7 @@ interface AttributeInterface {
 
 interface IdentifierInterface {
     public function setId(string $id): static;
+    public function removeId(): static;
     public function getId(): ?string;
 }
 
@@ -54,7 +54,7 @@ interface RawTextElementInterface extends RawTextInterface {
 // Builder interfaces
 
 interface ElementBuilderInterface {
-    public function createHTMLElement(TagName $tagName): ElementInterface;
+    public function createHTMLElement(TagName $tagName): HTMLElementInterface;
     public function createTextElement(string $text): RawTextElementInterface;
 }
 

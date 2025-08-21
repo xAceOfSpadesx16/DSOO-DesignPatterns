@@ -1,14 +1,10 @@
 <?php
-// require_once 'patrones/builder/elements.php';
+require_once 'patrones/builder/elements.php';
 
-// use Builder\Elements\TableElement;
+use Builder\Elements\TableElement;
 
-// $table = new TableElement();
-// $table->addClass("my-table");
-// $table->addClass("another-class");
+$table = new TableElement()->addClass("my-table");
 
-// echo $table->getTagName();
-// echo "<br>";
-// echo implode(", ", $table->getClasses());
-// echo "<br>";
-// var_dump($table->getAttributes());
+var_dump($table->getTagName());
+var_dump($table->getClasses());
+var_dump($table->getAttributes());
