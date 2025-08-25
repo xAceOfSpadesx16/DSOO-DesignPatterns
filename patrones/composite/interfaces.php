@@ -22,4 +22,6 @@ interface NodeInterface {
     public function clearChildren(): static;
 
     public function isAncestor(NodeInterface $node): bool;
+
+    public function isAllowedChild(NodeInterface $child): bool;
 }

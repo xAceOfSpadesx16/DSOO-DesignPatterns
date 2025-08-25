@@ -1,19 +1,43 @@
 <?php
 namespace Builder\Elements;
 
+
 require_once __DIR__ . DIRECTORY_SEPARATOR . "interfaces.php";
 require_once dirname(__DIR__) . DIRECTORY_SEPARATOR . "composite" . DIRECTORY_SEPARATOR . "interfaces.php";
+require_once dirname(__DIR__) . DIRECTORY_SEPARATOR . "state" . DIRECTORY_SEPARATOR . "interfaces.php";
+require_once dirname(__DIR__) . DIRECTORY_SEPARATOR . "state" . DIRECTORY_SEPARATOR . "states.php";
 
 use Builder\Enums\TagName;
 
-use Builder\Interfaces\HTMLElementInterface;
-use Builder\Interfaces\RawTextElementInterface;
-use Builder\Interfaces\TaggedInterface;
+use Builder\Interfaces\NodeHTMLElementInterface;
+use Builder\Interfaces\RawTextNodeElementInterface;
 use Composite\Interfaces\NodeInterface;
 
-class NodeElement implements NodeInterface{
+abstract class BaseHTMLElement implements NodeHTMLElementInterface {}
+
+abstract class BaseTextElement implements RawTextNodeElementInterface {}
+
+class HtmlElement extends BaseHTMLElement {
+    private TagName $tagName;
+    private ?array $classes = null;
+    private ?array $styles = null;
+    private ?array $attributes = null;
+    private ?string $id = null;
     private ?NodeInterface $parent = null;
     private array $children = [];
+    private array $allowedChildren = [];
+
+    private int $currentChildIndex = 0;
+
+    public function __construct(TagName $tagName, ?string $id = null, ?array $classes = null, ?array $styles = null, ?array $attributes = null, ?array $children = null, ?array $allowedChildren = null) {
+        $this->tagName = $tagName;
+        $this->id = $id;
+        $this->classes = $classes;
+        $this->styles = $styles;
+        $this->attributes = $attributes;
+        $this->allowedChildren = $allowedChildren ?? [];
+        $this->appendChildren(...$children ?? []);
+    }
 
     public function getParent(): ?NodeInterface {
         return $this->parent;
@@ -33,6 +57,11 @@ class NodeElement implements NodeInterface{
     }
 
     public function appendChildren(NodeInterface ...$children): static {
+        $validChildren = $this->validateChildren(...$children);
+        if (!$validChildren) {
+            throw new \InvalidArgumentException("Los hijos proporcionados no son válidos.");
+        }
+
         $this->children = array_merge($this->children, $children);
         foreach ($children as $child) {
             $child->setParent($this);
@@ -41,124 +70,65 @@ class NodeElement implements NodeInterface{
     }
 
     public function prependChild(NodeInterface $child): static {
-        $this->children ??= [];
+        $validChildren = $this->validateChildren($child);
+        if (!$validChildren) {
+            throw new \InvalidArgumentException("El hijo proporcionado no es válido.");
+        }
+
         array_unshift($this->children, $child);
         $child->setParent($this);
         return $this;
     }
 
     public function insertChildAt(int $index, NodeInterface $child): static {
-        if ($this->isAncestor($child)) {
-            throw new \InvalidArgumentException("El nodo hijo no puede ser un ancestro.");
+        $validChildren = $this->validateChildren($child);
+        if (!$validChildren) {
+            throw new \InvalidArgumentException("El hijo proporcionado no es válido.");
         }
 
-        $this->children ??= [];
+        $index = max(0, min($index, count($this->children))); // Mantener dentro del limite.
+
         array_splice($this->children, $index, 0, [$child]);
         $child->setParent($this);
         return $this;
     }
 
     public function removeChild(NodeInterface $child): static {
-        if ($this->children) {
-            $this->children = array_filter($this->children, fn($c) => $c !== $child);
+        $key = array_search($child, $this->children, true);
+        if ($key !== false) {
+            unset($this->children[$key]);
+            $this->children = array_values($this->children); // Reindexacion
             $child->setParent(null);
         }
         return $this;
     }
 
     public function clearChildren(): static {
+        foreach ($this->children as $child) { $child->setParent(null); }
         $this->children = [];
         return $this;
     }
 
     public function isAncestor(NodeInterface $node): bool {
-        if ($this === $node) {
-            return true;
+        if ($this->parent === null) return false;
+        if ($this->parent === $node) return true;
+        return $this->parent->isAncestor($node);
+    }
+
+    public function isAllowedChild(NodeInterface $child): bool {
+        return empty($this->allowedChildren) || in_array($child::class, $this->allowedChildren, true);
+    }
+
+    // ValidationMethod
+    private function validateChildren(NodeInterface ...$children): bool {
+        foreach ($children as $child) {
+            if ($child === $this) return false;
+
+            if (!$this->isAllowedChild($child)) return false;
+
+            if ($child->isAncestor($this)) return false;
         }
-        $parent = $this->parent;
-        while ($parent) {
-            if ($parent === $node) {
-                return true;
-            }
-            $parent = $parent->getParent();
-        }
-        return false;
-    }
-}
-
-class NoChildNode implements NodeInterface {
-    private ?NodeInterface $parent = null;
-
-    public function __construct(?NodeInterface $parent = null) {
-        $this->parent = $parent;
-    }
-
-    public function getParent(): ?NodeInterface {
-        return $this->parent;
-    }
-
-    public function setParent(?NodeInterface $parent): static {
-        $this->parent = $parent;
-        return $this;
-    }
-
-    public function getChildren(): array {
-        return [];
-    }
-
-    public function hasChildren(): bool {
-        return false;
-    }
-
-    public function appendChildren(NodeInterface ...$children): static {
-        throw new \BadMethodCallException("No se pueden agregar hijos a este nodo.");
-    }
-
-    public function prependChild(NodeInterface $child): static {
-        throw new \BadMethodCallException("No se pueden agregar hijos a este nodo.");
-    }
-
-    public function insertChildAt(int $index, NodeInterface $child): static {
-        throw new \BadMethodCallException("No se pueden agregar hijos a este nodo.");
-    }
-
-    public function removeChild(NodeInterface $child): static {
-        throw new \BadMethodCallException("No se pueden eliminar hijos de este nodo.");
-    }
-
-    public function clearChildren(): static {
-        throw new \BadMethodCallException("No se pueden eliminar hijos de este nodo.");
-    }
-
-    public function isAncestor(NodeInterface $node): bool {
-        return false;
-    }
-
-}
-
-abstract class BaseElement implements TaggedInterface {
-}
-
-abstract class BaseHTMLElement extends NodeElement  implements HTMLElementInterface {}
-
-abstract class BaseTextElement extends NoChildNode implements RawTextElementInterface {}
-
-class HtmlElement extends BaseHTMLElement {
-    private TagName $tagName;
-    private ?array $classes = null;
-    private ?array $styles = null;
-    private ?array $attributes = null;
-    private ?string $id = null;
-
-    public function __construct(TagName $tagName, ?string $id = null, ?array $classes = null, ?array $styles = null, ?array $attributes = null, ?array $children = null) {
-        $this->tagName = $tagName;
-        $this->id = $id;
-        $this->classes = $classes;
-        $this->styles = $styles;
-        $this->attributes = $attributes;
-        if ($children) {
-            $this->appendChildren(...$children);
-        }
+        return true;
     }
 
     // TaggedInterface Method
@@ -233,35 +203,34 @@ class HtmlElement extends BaseHTMLElement {
         return $this;
     }
 
+
+    public function next(): ?NodeInterface {
+        return $this->children[$this->currentChildIndex++] ?? null;
+    }
+
+    public function hasNext(): bool {
+        return isset($this->children[$this->currentChildIndex]);
+    }
+
+    public function rewind(): void {
+        $this->currentChildIndex = 0;
+    }
 }
 
-
-// String Element
 class TextElement extends BaseTextElement {
-    private ?string $text = null;
-    private TagName $tagName= TagName::STRING;
     private ?NodeInterface $parent = null;
+    private string $text = "";
+    private TagName $tagName= TagName::STRING;
 
-    public function __construct(string $text) {
+    public function __construct(string $text, ?NodeInterface $parent = null) {
         $this->setText($text);
-    }
-
-    public function setText(string $text): static {
-        $this->text = htmlspecialchars($text);
-        return $this;
-    }
-
-    public function getText(): ?string {
-        return htmlspecialchars_decode($this->text);
-    }
-
-    public function getTagName(): string {
-        return $this->tagName->value;
+        $this->parent = $parent;
     }
 
     public function getParent(): ?NodeInterface {
         return $this->parent;
     }
+
     public function setParent(?NodeInterface $parent): static {
         $this->parent = $parent;
         return $this;
@@ -275,24 +244,44 @@ class TextElement extends BaseTextElement {
         return false;
     }
 
-    public function appendChild(NodeInterface $child): static {
-        throw new \LogicException("Este elemento no puede tener hijos.");
+    public function appendChildren(NodeInterface ...$children): static {
+        throw new \BadMethodCallException("No se pueden agregar hijos a este nodo.");
     }
 
     public function prependChild(NodeInterface $child): static {
-        throw new \LogicException("Este elemento no puede tener hijos.");
+        throw new \BadMethodCallException("No se pueden agregar hijos a este nodo.");
     }
 
     public function insertChildAt(int $index, NodeInterface $child): static {
-        throw new \LogicException("Este elemento no puede tener hijos.");
+        throw new \BadMethodCallException("No se pueden agregar hijos a este nodo.");
     }
 
     public function removeChild(NodeInterface $child): static {
-        throw new \LogicException("Este elemento no puede tener hijos.");
+        throw new \BadMethodCallException("No se pueden eliminar hijos de este nodo.");
     }
 
     public function clearChildren(): static {
-        throw new \LogicException("Este elemento no puede tener hijos.");
+        throw new \BadMethodCallException("No se pueden eliminar hijos de este nodo.");
+    }
+
+    public function isAncestor(NodeInterface $node): bool {
+        return false;
+    }
+
+    public function isAllowedChild(NodeInterface $child): bool {
+        return false;
+    }
+    public function setText(string $text): static {
+        $this->text = htmlspecialchars($text);
+        return $this;
+    }
+
+    public function getText(): string {
+        return htmlspecialchars_decode($this->text);
+    }
+
+    public function getTagName(): string {
+        return $this->tagName->value;
     }
 }
 
@@ -301,44 +290,65 @@ class TextElement extends BaseTextElement {
 
 class TableElement extends HtmlElement {
     public function __construct(?string $id = null, ?array $classes = null, ?array $styles = null, ?array $attributes = null, ?array $children = null) {
-        parent::__construct(tagName: TagName::TABLE, id: $id, classes: $classes, styles: $styles, attributes: $attributes, children: $children);
+        $allowedChildren = [
+            TableHeaderElement::class,
+            TableBodyElement::class,
+            TableFooterElement::class,
+        ];
+        parent::__construct(tagName: TagName::TABLE, id: $id, classes: $classes, styles: $styles, attributes: $attributes, children: $children, allowedChildren: $allowedChildren);
     }
 }
 
 class TableHeaderElement extends HtmlElement {
     public function __construct(?string $id = null, ?array $classes = null, ?array $styles = null, ?array $attributes = null, ?array $children = null) {
-        parent::__construct(tagName: TagName::THEAD, id: $id, classes: $classes, styles: $styles, attributes: $attributes, children: $children);
+        $allowedChildren = [
+            TableRowElement::class
+        ];
+        parent::__construct(tagName: TagName::THEAD, id: $id, classes: $classes, styles: $styles, attributes: $attributes, children: $children, allowedChildren: $allowedChildren);
     }
 }
 
 class TableBodyElement extends HtmlElement {
+
     public function __construct(?string $id = null, ?array $classes = null, ?array $styles = null, ?array $attributes = null, ?array $children = null) {
-        parent::__construct(tagName: TagName::TBODY, id: $id, classes: $classes, styles: $styles, attributes: $attributes, children: $children);
+        $allowedChildren = [
+            TableRowElement::class
+        ];
+        parent::__construct(tagName: TagName::TBODY, id: $id, classes: $classes, styles: $styles, attributes: $attributes, children: $children, allowedChildren: $allowedChildren);
     }
 }
 
 class TableFooterElement extends HtmlElement {
     public function __construct(?string $id = null, ?array $classes = null, ?array $styles = null, ?array $attributes = null, ?array $children = null) {
-        parent::__construct(tagName: TagName::TFOOT, id: $id, classes: $classes, styles: $styles, attributes: $attributes, children: $children);
+        $allowedChildren = [
+            TableRowElement::class
+        ];
+        parent::__construct(tagName: TagName::TFOOT, id: $id, classes: $classes, styles: $styles, attributes: $attributes, children: $children, allowedChildren: $allowedChildren);
     }
 }
 
 class TableRowElement extends HtmlElement {
     public function __construct(?string $id = null, ?array $classes = null, ?array $styles = null, ?array $attributes = null, ?array $children = null) {
-        parent::__construct(tagName: TagName::TR, id: $id, classes: $classes, styles: $styles, attributes: $attributes, children: $children);
+        $allowedChildren = [
+            TableDataCellElement::class,
+            TableHeaderCellElement::class
+        ];
+        parent::__construct(tagName: TagName::TR, id: $id, classes: $classes, styles: $styles, attributes: $attributes, children: $children, allowedChildren: $allowedChildren);
     }
 
 }
 
 class TableDataCellElement extends HtmlElement {
     public function __construct(?string $id = null, ?array $classes = null, ?array $styles = null, ?array $attributes = null, ?array $children = null) {
-        parent::__construct(tagName: TagName::TD, id: $id, classes: $classes, styles: $styles, attributes: $attributes, children: $children);
+        $allowedChildren = [];
+        parent::__construct(tagName: TagName::TD, id: $id, classes: $classes, styles: $styles, attributes: $attributes, children: $children, allowedChildren: $allowedChildren);
     }
 }
 
 class TableHeaderCellElement extends HtmlElement {
     public function __construct(?string $id = null, ?array $classes = null, ?array $styles = null, ?array $attributes = null, ?array $children = null) {
-        parent::__construct(tagName: TagName::TH, id: $id, classes: $classes, styles: $styles, attributes: $attributes, children: $children);
+        $allowedChildren = [];
+        parent::__construct(tagName: TagName::TH, id: $id, classes: $classes, styles: $styles, attributes: $attributes, children: $children, allowedChildren: $allowedChildren);
     }
 
 }

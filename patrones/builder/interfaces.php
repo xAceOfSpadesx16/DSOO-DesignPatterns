@@ -2,9 +2,13 @@
 namespace Builder\Interfaces;
 
 require_once 'enums.php';
-require_once 'elements.php';
+require_once dirname(__DIR__) . DIRECTORY_SEPARATOR . "composite" . DIRECTORY_SEPARATOR . "interfaces.php";
+require_once dirname(__DIR__) . DIRECTORY_SEPARATOR . "iterator" . DIRECTORY_SEPARATOR . "interfaces.php";
 
-use Builder\Enums\TagName;
+use Composite\Interfaces\NodeInterface;
+use Iterators\Interfaces\IterableNodeInterface;
+
+
 
 // Element interfaces
 
@@ -36,38 +40,50 @@ interface IdentifierInterface {
     public function getId(): ?string;
 }
 
-interface RawTextInterface {
+
+interface HTMLElementInterface extends TaggedInterface, ClassListInterface, InlineStyleInterface, AttributeInterface, IdentifierInterface {}
+
+interface RawTextElementInterface extends TaggedInterface {
     public function setText(string $text): static;
-    public function getText(): ?string;
+    public function getText(): string;
 }
 
-interface HTMLElementInterface extends
-    ClassListInterface,
-    InlineStyleInterface,
-    AttributeInterface,
-    IdentifierInterface {
-}
+interface NodeHTMLElementInterface extends HTMLElementInterface, IterableNodeInterface {}
 
-interface RawTextElementInterface extends RawTextInterface {
-}
+interface RawTextNodeElementInterface extends RawTextElementInterface, NodeInterface {}
+
+
 
 // Builder interfaces
 
-interface ElementBuilderInterface {
-    public function createHTMLElement(TagName $tagName): HTMLElementInterface;
-    public function createTextElement(string $text): RawTextElementInterface;
+interface BuilderInterface{
+    public function build(): HTMLElementInterface;
+    public function reset(): static;
 }
 
-interface TableElementBuilderInterface extends ElementBuilderInterface {
-    public function createTable(): HTMLElementInterface;
-    public function createTableHeader(): HTMLElementInterface;
-    public function createTableBody(): HTMLElementInterface;
-    public function createTableFooter(): HTMLElementInterface;
-    public function createTableRow(): HTMLElementInterface;
-    public function createTableDataCell(): HTMLElementInterface;
-    public function createTableHeaderCell(): HTMLElementInterface;
+interface TableBuilderInterface extends BuilderInterface {
+    public function setTableHeader(?array $headers): static;
+    public function setTableBody(?array $rows): static;
+    public function setTableFooter(?array $footers): static;
 
 }
 
 
-?>
+
+// Render interfaces
+
+interface RendererInterface {
+    public function render(NodeInterface $element): string;
+    public function renderElement(NodeHTMLElementInterface $element): string;
+    public function renderTextElement(RawTextNodeElementInterface $element): string;
+    
+    // HTML attrs
+    public function renderChildren(NodeHTMLElementInterface $element): string;
+    public function renderId(NodeHTMLElementInterface $element): string;
+    public function renderClasses(NodeHTMLElementInterface $element): string;
+
+    public function renderStyles(NodeHTMLElementInterface $element): string;
+
+    public function renderAttributes(NodeHTMLElementInterface $element): string;
+
+}
