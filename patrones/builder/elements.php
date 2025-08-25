@@ -29,6 +29,9 @@ class HtmlElement extends BaseHTMLElement {
 
     private int $currentChildIndex = 0;
 
+    /**
+     * Constructor de HtmlElement.
+     */
     public function __construct(TagName $tagName, ?string $id = null, ?array $classes = null, ?array $styles = null, ?array $attributes = null, ?array $children = null, ?array $allowedChildren = null) {
         $this->tagName = $tagName;
         $this->id = $id;
@@ -39,23 +42,38 @@ class HtmlElement extends BaseHTMLElement {
         $this->appendChildren(...$children ?? []);
     }
 
+    /**
+     * Obtiene el elemento padre.
+     */
     public function getParent(): ?NodeInterface {
         return $this->parent;
     }
 
+    /**
+     * Establece el elemento padre.
+     */
     public function setParent(?NodeInterface $parent): static {
         $this->parent = $parent;
         return $this;
     }
 
+    /**
+     * Obtiene los hijos.
+     */
     public function getChildren(): array {
         return $this->children;
     }
 
+    /**
+     * Verifica si tiene hijos.
+     */
     public function hasChildren(): bool {
         return !empty($this->children);
     }
 
+    /**
+     * Agrega hijos al elemento.
+     */
     public function appendChildren(NodeInterface ...$children): static {
         $validChildren = $this->validateChildren(...$children);
         if (!$validChildren) {
@@ -69,6 +87,9 @@ class HtmlElement extends BaseHTMLElement {
         return $this;
     }
 
+    /**
+     * Agrega un hijo al inicio.
+     */
     public function prependChild(NodeInterface $child): static {
         $validChildren = $this->validateChildren($child);
         if (!$validChildren) {
@@ -80,6 +101,9 @@ class HtmlElement extends BaseHTMLElement {
         return $this;
     }
 
+    /**
+     * Inserta un hijo en una posición específica.
+     */
     public function insertChildAt(int $index, NodeInterface $child): static {
         $validChildren = $this->validateChildren($child);
         if (!$validChildren) {
@@ -93,6 +117,9 @@ class HtmlElement extends BaseHTMLElement {
         return $this;
     }
 
+    /**
+     * Elimina un hijo.
+     */
     public function removeChild(NodeInterface $child): static {
         $key = array_search($child, $this->children, true);
         if ($key !== false) {
@@ -103,18 +130,27 @@ class HtmlElement extends BaseHTMLElement {
         return $this;
     }
 
+    /**
+     * Elimina todos los hijos.
+     */
     public function clearChildren(): static {
         foreach ($this->children as $child) { $child->setParent(null); }
         $this->children = [];
         return $this;
     }
 
+    /**
+     * Verifica si el nodo dado es ancestro.
+     */
     public function isAncestor(NodeInterface $node): bool {
         if ($this->parent === null) return false;
         if ($this->parent === $node) return true;
         return $this->parent->isAncestor($node);
     }
 
+    /**
+     * Verifica si el hijo es permitido.
+     */
     public function isAllowedChild(NodeInterface $child): bool {
         return empty($this->allowedChildren) || in_array($child::class, $this->allowedChildren, true);
     }
@@ -131,12 +167,16 @@ class HtmlElement extends BaseHTMLElement {
         return true;
     }
 
-    // TaggedInterface Method
+    /**
+     * Obtiene el nombre de la etiqueta HTML.
+     */
     public function getTagName(): string {
         return $this->tagName->value;
     }
 
-    // HTMLInterface Methods
+    /**
+     * Agrega una clase CSS.
+     */
     public function addClass(string $class): static {
         $this->classes ??= [];
         if (!in_array($class, $this->classes, true)) {
@@ -145,6 +185,9 @@ class HtmlElement extends BaseHTMLElement {
         return $this;
     }
 
+    /**
+     * Elimina una clase CSS.
+     */
     public function removeClass(string $class): static {
         if (!$this->classes) return $this;
         if (($key = array_search($class, $this->classes, true)) !== false) {
@@ -153,65 +196,103 @@ class HtmlElement extends BaseHTMLElement {
         return $this;
     }
 
+    /**
+     * Obtiene las clases CSS.
+     */
     public function getClasses(): ?array {
         return $this->classes;
     }
 
+    /**
+     * Establece un estilo en línea.
+     */
     public function setInlineStyle(string $property, string $value): static {
         $this->styles ??= [];
         $this->styles[strtolower($property)] = strtolower($value);
         return $this;
     }
 
+    /**
+     * Elimina un estilo en línea.
+     */
     public function removeInlineStyle(string $property): static {
         if (!$this->styles) return $this;
         unset($this->styles[strtolower($property)]);
         return $this;
     }
 
+    /**
+     * Obtiene los estilos en línea.
+     */
     public function getInlineStyles(): ?array {
         return $this->styles;
     }
 
+    /**
+     * Establece un atributo HTML.
+     */
     public function setAttribute(string $name, string $value): static {
         $this->attributes ??= [];
         $this->attributes[$name] = $value;
         return $this;
     }
 
+    /**
+     * Elimina un atributo HTML.
+     */
     public function removeAttribute(string $name): static {
         if (!$this->attributes) return $this;
         unset($this->attributes[$name]);
         return $this;
     }
 
+    /**
+     * Obtiene los atributos HTML.
+     */
     public function getAttributes(): ?array {
         return $this->attributes;
     }
 
+    /**
+     * Establece el ID del elemento.
+     */
     public function setId(string $id): static {
         $this->id = $id;
         return $this;
     }
 
+    /**
+     * Obtiene el ID del elemento.
+     */
     public function getId(): ?string {
         return $this->id;
     }
 
+    /**
+     * Elimina el ID del elemento.
+     */
     public function removeId(): static {
         $this->id = null;
         return $this;
     }
 
-
+    /**
+     * Obtiene el siguiente hijo (para iteración).
+     */
     public function next(): ?NodeInterface {
         return $this->children[$this->currentChildIndex++] ?? null;
     }
 
+    /**
+     * Verifica si hay más hijos (para iteración).
+     */
     public function hasNext(): bool {
         return isset($this->children[$this->currentChildIndex]);
     }
 
+    /**
+     * Reinicia el índice de iteración de hijos.
+     */
     public function rewind(): void {
         $this->currentChildIndex = 0;
     }
@@ -222,64 +303,94 @@ class TextElement extends BaseTextElement {
     private string $text = "";
     private TagName $tagName= TagName::STRING;
 
+    /**
+     * Constructor de TextElement.
+     */
     public function __construct(string $text, ?NodeInterface $parent = null) {
         $this->setText($text);
         $this->parent = $parent;
     }
 
+    /**
+     * Obtiene el elemento padre.
+     */
     public function getParent(): ?NodeInterface {
         return $this->parent;
     }
 
+    /**
+     * Establece el elemento padre.
+     */
     public function setParent(?NodeInterface $parent): static {
         $this->parent = $parent;
         return $this;
     }
 
+    /**
+     * Obtiene los hijos (siempre vacío).
+     */
     public function getChildren(): array {
         return [];
     }
 
+    /**
+     * Verifica si tiene hijos (siempre falso).
+     */
     public function hasChildren(): bool {
         return false;
     }
 
+    /**
+     * Métodos para manipulación de hijos (no permitido).
+     */
     public function appendChildren(NodeInterface ...$children): static {
         throw new \BadMethodCallException("No se pueden agregar hijos a este nodo.");
     }
-
     public function prependChild(NodeInterface $child): static {
         throw new \BadMethodCallException("No se pueden agregar hijos a este nodo.");
     }
-
     public function insertChildAt(int $index, NodeInterface $child): static {
         throw new \BadMethodCallException("No se pueden agregar hijos a este nodo.");
     }
-
     public function removeChild(NodeInterface $child): static {
         throw new \BadMethodCallException("No se pueden eliminar hijos de este nodo.");
     }
-
     public function clearChildren(): static {
         throw new \BadMethodCallException("No se pueden eliminar hijos de este nodo.");
     }
 
+    /**
+     * Verifica si el nodo dado es ancestro (siempre falso).
+     */
     public function isAncestor(NodeInterface $node): bool {
         return false;
     }
 
+    /**
+     * Verifica si el hijo es permitido (siempre falso).
+     */
     public function isAllowedChild(NodeInterface $child): bool {
         return false;
     }
+
+    /**
+     * Establece el texto.
+     */
     public function setText(string $text): static {
         $this->text = htmlspecialchars($text);
         return $this;
     }
 
+    /**
+     * Obtiene el texto.
+     */
     public function getText(): string {
         return htmlspecialchars_decode($this->text);
     }
 
+    /**
+     * Obtiene el nombre de la etiqueta (STRING).
+     */
     public function getTagName(): string {
         return $this->tagName->value;
     }

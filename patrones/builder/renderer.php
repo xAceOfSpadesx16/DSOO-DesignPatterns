@@ -13,6 +13,11 @@ use Builder\Interfaces\RendererInterface;
 
 // APLICACION DEL PATRON ITERATOR EN METODO RENDERCHILDREN
 class HtmlRenderer implements RendererInterface {
+    /**
+     * Renderiza un elemento NodeInterface a HTML.
+     * @param NodeInterface $element
+     * @return string
+     */
     public function render(NodeInterface $element): string {
 
         if ($element instanceof RawTextNodeElementInterface) {
@@ -24,6 +29,11 @@ class HtmlRenderer implements RendererInterface {
         throw new \InvalidArgumentException("Elemento no soportado.");
     }
 
+    /**
+     * Renderiza un elemento NodeHTMLElementInterface.
+     * @param NodeHTMLElementInterface $element
+     * @return string
+     */
     public function renderElement(NodeHTMLElementInterface $element): string {
         $tagName = $element->getTagName();
 
@@ -43,10 +53,20 @@ class HtmlRenderer implements RendererInterface {
         return $openingTag . $this->renderChildren($element) . $closingTag;
     }
 
+    /**
+     * Renderiza un elemento de texto.
+     * @param RawTextNodeElementInterface $element
+     * @return string
+     */
     public function renderTextElement(RawTextNodeElementInterface $element): string {
         return htmlspecialchars($element->getText());
     }
 
+    /**
+     * Renderiza los hijos de un elemento HTML.
+     * @param NodeHTMLElementInterface $element
+     * @return string
+     */
     public function renderChildren(NodeHTMLElementInterface $element): string {
         if (!($element instanceof IterableNodeInterface)) {
             return '';
@@ -63,16 +83,31 @@ class HtmlRenderer implements RendererInterface {
         return $html;
     }
 
+    /**
+     * Renderiza el atributo id.
+     * @param NodeHTMLElementInterface $element
+     * @return string
+     */
     public function renderId(NodeHTMLElementInterface $element): string {
         $id = $element->getId();
         return $id ? 'id="' . htmlspecialchars($id) . '"' : '';
     }
 
+    /**
+     * Renderiza las clases CSS.
+     * @param NodeHTMLElementInterface $element
+     * @return string
+     */
     public function renderClasses(NodeHTMLElementInterface $element): string {
         $classes = $element->getClasses();
         return $classes ? 'class="' . htmlspecialchars(implode(' ', $classes)) . '"' : '';
     }
 
+    /**
+     * Renderiza los estilos en línea.
+     * @param NodeHTMLElementInterface $element
+     * @return string
+     */
     public function renderStyles(NodeHTMLElementInterface $element): string {
         $styles = $element->getInlineStyles();
         if (empty($styles)) {
@@ -85,6 +120,11 @@ class HtmlRenderer implements RendererInterface {
         return 'style="' . rtrim($styleString) . '"';
     }
 
+    /**
+     * Renderiza los atributos HTML.
+     * @param NodeHTMLElementInterface $element
+     * @return string
+     */
     public function renderAttributes(NodeHTMLElementInterface $element): string {
         $attributes = $element->getAttributes();
         if (empty($attributes)) {

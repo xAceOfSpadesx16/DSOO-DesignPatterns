@@ -45,7 +45,6 @@ echo "<br><br><br>";
 
 echo "<h2>State / Proxy </h2>";
 
-// Capturamos el output del include
 ob_start();
 include __DIR__ . '/patrones/state/index.php';
 $initialStateHtml = ob_get_clean();

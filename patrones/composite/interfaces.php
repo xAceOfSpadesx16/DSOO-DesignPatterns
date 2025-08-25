@@ -1,6 +1,9 @@
 <?php
 namespace Composite\Interfaces;
 
+/**
+ * Contrato para nodos en estructuras de árbol, permitiendo manipulación de padres e hijos.
+ */
 interface NodeInterface {
 
     public function getParent(): ?NodeInterface;
